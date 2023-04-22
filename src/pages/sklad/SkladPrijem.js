@@ -1,154 +1,131 @@
-import { useState } from "react";
-import {
-    Button,
-    Modal,
-    Form,
-    InputGroup,
-    Row,
-    Col,
-} from "react-bootstrap";
+import { useState, useEffect } from "react";
+import { Button, Modal, Form, InputGroup, Row, Col } from "react-bootstrap";
 import {
     BsSave,
     BsCalendar,
     BsPerson,
-    BsFillPersonLinesFill,
-    BsInfoCircle,
+    BsCardList,
 } from "react-icons/bs";
+import { BiCustomize } from "react-icons/bi";
+import { GiMetalBar } from "react-icons/gi";
+import { GoPackage } from "react-icons/go";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
+import {PrijemFormular} from "./PrijemFormular";
 
 export function SkladPrijem() {
-    const [showModal, setShowModal] = useState(false);
+    const [slitiny, setSlitiny] = useState([]);
+    const [dodavatele, setDodavatele] = useState([]);
+    const [typSrotu, setTypSrotu] = useState([]);
+    const [selectedTypSrotu, setSelectedTypSrotu] = useState([]);
     const [datum, setDatum] = useState("");
-    const [vaznyList, setVaznyList] = useState(0);
     const [dodavatel, setDodavatel] = useState("");
-    const [druhSrotu, setDruhSrotu] = useState("");
-    const [mnozstvi, setMnozstvi] = useState(0);
+    const [showModal, setShowModal] = useState(false);
+    const [vaznyList, setVaznyList] = useState('');
+    const [druhSlitina, setDruhSlitina] = useState('');
+    const [mnozstvi, setMnozstvi] = useState('');
+    const [baleni, setBaleni] = useState('');
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const db = getFirestore();
+            const slitinyData = collection(db, "slitiny");
+            const querySnapshotSlitiny = await getDocs(slitinyData);
+            const fetchedSlitiny = querySnapshotSlitiny.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            const dodavateleData = collection(db, "dodavatele");
+            const querySnapshotDodavatele = await getDocs(dodavateleData);
+            const fetchedDodavatele = querySnapshotDodavatele.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+
+            const uniqueTypSrotu = fetchedSlitiny.reduce((accumulator, current) => {
+                if (!accumulator.find((item) => item.typSrotu === current.typSrotu)) {
+                    accumulator.push(current);
+                }
+                return accumulator;
+            }, []);
+
+            setSlitiny(fetchedSlitiny);
+            setDodavatele(fetchedDodavatele);
+            setTypSrotu(uniqueTypSrotu);
+        };
+        fetchData([]);
+    }, []);
 
     const handleOpenModal = () => {
         setShowModal(true);
     };
-
     const handleCloseModal = () => {
         setShowModal(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // uložení dat do databáze Firestore
-        handleCloseModal();
+
+        const db = getFirestore();
+        const zaznamPrijem = collection(db, "skladPrijem");
+        const prijemZasoba = collection(db, "skladZasoba");
+
+        const newPrijem = {
+            datum: datum,
+            vaznyList: vaznyList,
+            dodavatel: dodavatel,
+            druhSlitina: druhSlitina,
+            typSrotu: selectedTypSrotu,
+            mnozstvi: mnozstvi,
+            baleni: baleni,
+        };
+        await addDoc(zaznamPrijem, newPrijem);
+
+        const querySnapshotZasoba = await getDocs(prijemZasoba);
+        const zasobaData = querySnapshotZasoba.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        const foundZasoba = zasobaData.find(
+            (item) =>
+                item.druhSlitina === druhSlitina && item.typSrotu === selectedTypSrotu
+        );
+
+        if (foundZasoba) {
+            const newMnozstvi = parseFloat(foundZasoba.mnozstvi) + parseFloat(mnozstvi);
+            await updateDoc(doc(db, "skladZasoba", foundZasoba.id), {
+                mnozstvi: newMnozstvi,
+            });
+        } else {
+            await addDoc(prijemZasoba, {
+                druhSlitina: druhSlitina,
+                typSrotu: typSrotu,
+                mnozstvi: mnozstvi,
+                baleni: baleni,
+            });
+        }
+
+        setDodavatel("");
+        setMnozstvi("");
+        setBaleni("");
+        setDatum("");
+        setVaznyList("");
+        setDruhSlitina("");
+        setSelectedTypSrotu([]);
+        setShowModal(false);
     };
 
     return (
         <>
-            <Button
-                variant="primary"
-                onClick={handleOpenModal}
-                className="mb-3"
-            >
-                <BsSave className="me-2" /> Přidat příjem
-            </Button>
-
-            <Modal show={showModal} onHide={handleCloseModal} centered>
+            <Button onClick={handleOpenModal}>Přidat záznam</Button>
+            <Modal show={showModal} onHide={handleCloseModal}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Přidat příjem materiálu na sklad</Modal.Title>
+                    <Modal.Title>Přidat záznam</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <Form onSubmit={handleSubmit}>
-
-                        {/* Pole pro zadání data */}
-                        <Form.Group className="mb-3">
-                            <InputGroup>
-                                <InputGroup.Text><BsCalendar /></InputGroup.Text>
-                                <Form.Control
-                                    type="date"
-                                    value={datum}
-                                    onChange={(e) => setDatum(e.target.value)}
-                                    required
-                                    placeholder="Datum"
-                                />
-                            </InputGroup>
-                        </Form.Group>
-
-                        {/* Pole pro zadání vážného listu */}
-                        <Form.Group className="mb-3">
-                            <InputGroup>
-                                <InputGroup.Text><BsInfoCircle /></InputGroup.Text>
-                                <Form.Control
-                                    type="number"
-                                    value={vaznyList}
-                                    onChange={(e) => setVaznyList(e.target.value)}
-                                    required
-                                    placeholder="Vážný list"
-                                />
-                            </InputGroup>
-                        </Form.Group>
-
-                        {/* Pole pro zadání dodavatele */}
-                        <Form.Group className="mb-3">
-                            <InputGroup>
-                                <InputGroup.Text><BsPerson /></InputGroup.Text>
-                                <Form.Control
-                                    type="text"
-                                    value={dodavatel}
-                                    onChange={(e) => setDodavatel(e.target.value)}
-                                    required
-                                    placeholder="Dodavatel"
-                                />
-                            </InputGroup>
-                        </Form.Group>
-
-                        {/* Pole pro zadání druhu šrotu */}
-                        <Form.Group className="mb-3">
-                            <InputGroup>
-                                <InputGroup.Text><BsFillPersonLinesFill /></InputGroup.Text>
-                                <Form.Control
-                                    type="text"
-                                    value={druhSrotu}
-                                    onChange={(e) => setDruhSrotu(e.target.value)}
-                                    required
-                                    placeholder="Druh šrotu"
-                                />
-                            </InputGroup>
-                        </Form.Group>
-
-                        {/* Pole pro zadání množství */}
-                        <Form.Group className="mb-3">
-                            <InputGroup>
-                                <InputGroup.Text><BsInfoCircle /></InputGroup.Text>
-                                <Form.Control
-                                    type="number"
-                                    value={mnozstvi}
-                                    onChange={(e) => setMnozstvi(e.target.value)}
-                                    required
-                                    placeholder="Množství"
-                                />
-                            </InputGroup>
-                        </Form.Group>
-
-                        {/* Tlačítka pro odeslání a zavření modálního okna */}
-                        <Row className="justify-content-end">
-                            <Col xs={12} sm={6} className="mb-2 mb-sm-0">
-                                <Button
-                                    variant="secondary"
-                                    onClick={handleCloseModal}
-                                    className="w-100"
-                                >
-                                    Zavřít
-                                </Button>
-                            </Col>
-                            <Col xs={12} sm={6}>
-                                <Button
-                                    type="submit"
-                                    variant="primary"
-                                    className="w-100"
-                                >
-                                    Uložit
-                                </Button>
-                            </Col>
-                        </Row>
-
-                    </Form>
+                    <PrijemFormular />
                 </Modal.Body>
             </Modal>
         </>
-    );
+);
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Button,
     Card,
@@ -15,7 +15,6 @@ import { FaIndustry, FaCogs } from 'react-icons/fa';
 import { db } from '../../firebase';
 import { collection, getDocs, getDoc, setDoc, doc } from 'firebase/firestore';
 import {NavbarMenu} from "../../components/NavbarMenu";
-
 
 export function FixacePage() {
     const [date, setDate] = useState('');
@@ -68,7 +67,7 @@ export function FixacePage() {
     return (
         <>
             <NavbarMenu />
-        <Container className="my-5">
+            <Container className="my-5">
             <Card>
                 <Card.Header>
                     <h3>Formulář</h3>
@@ -121,6 +120,7 @@ export function FixacePage() {
                                 </Form.Select>
                             </Form.Group>
                         </Row>
+
                         <Row className="mb-3">
                             <Form.Group as={Col} controlId="scrapType">
                                 <Form.Label>
@@ -137,6 +137,7 @@ export function FixacePage() {
                                     ))}
                                 </Form.Select>
                             </Form.Group>
+
                             <Form.Group as={Col} controlId="quantity">
                                 <Form.Label>
                                     <BsBoxArrowInUp /> Množství

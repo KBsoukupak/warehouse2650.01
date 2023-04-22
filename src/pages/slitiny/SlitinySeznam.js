@@ -1,12 +1,13 @@
 import React from "react";
 import { Button, ListGroup, Card, Row, Col } from "react-bootstrap";
+import { AiFillDelete } from "react-icons/ai";
 
 export const SlitinySeznam = ({ data }) => {
     return (
         <ListGroup className="mt-3">
             {data.map((item, index) => (
-                <ListGroup.Item key={index}>
-                    <Card className="shadow-sm">
+                <ListGroup.Item key={index} className="border-0 p-0">
+                    <Card className="shadow-sm mb-3">
                         <Card.Body>
                             <Row>
                                 <Col xs={8} md={9}>
@@ -22,8 +23,8 @@ export const SlitinySeznam = ({ data }) => {
                                     </Card.Text>
                                 </Col>
                                 <Col xs={4} md={3} className="d-flex align-items-center">
-                                    <Button variant="danger" size="sm" className="ms-auto">
-                                        Odstranit
+                                    <Button variant="danger" size="sm" className="ms-auto shadow-sm">
+                                        <AiFillDelete size="1.2em" className="align-text-bottom" /> Odstranit
                                     </Button>
                                 </Col>
                             </Row>
